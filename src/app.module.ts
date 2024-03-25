@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
-import { UsersModule } from './users/users.module';
+import { APP_GUARD } from '@nestjs/core';
+import { RolesGuard } from './guards/roles.guard';
 
-// IMPORT TYPEORM
-import { TypeOrmModule } from '@nestjs/typeorm';
+// IMPORT MODULE
+import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { JwtModule } from '@nestjs/jwt';
+
+// IMPORT TYPEORM MODULE
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 // IMPORT DOTENV
 import * as dotenv from 'dotenv';
@@ -25,8 +30,14 @@ dotenv.config();
     }),
     UsersModule,
     AuthModule,
+    JwtModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+  ],
 })
 export class AppModule {}
