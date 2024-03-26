@@ -9,6 +9,12 @@ import { encryptPassword, validatePassword } from 'src/utils/encrypt/password';
 import { ValidationEmail } from 'src/utils/validation/email';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 
+import {
+  paginate,
+  Pagination,
+  IPaginationOptions,
+} from 'nestjs-typeorm-paginate';
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -54,23 +60,24 @@ export class UsersService {
     return user;
   }
 
-  async findAll(order: 'ASC' | 'DESC' = 'ASC'): Promise<UsersEntity[]> {
-    const users = await this.usersRepository.find({
-      where: {
-        status: true,
-      },
-      order: {
-        id: order,
-      },
-    });
+  async findAll(
+    options: IPaginationOptions,
+    order: 'ASC' | 'DESC' = 'ASC',
+  ): Promise<Pagination<UsersEntity>> {
+    const queryBuilder = this.usersRepository.createQueryBuilder('u');
 
-    if (!users) {
-      throw new NotFoundError(
-        'Usuarios Inativo ou não existe no banco de dados!',
-      );
-    }
+    queryBuilder.select([
+      'u.id',
+      'u.name',
+      'u.email',
+      'u.phone',
+      'u.type_user',
+      'u.cpf',
+      'u.status',
+    ]);
+    queryBuilder.orderBy('u.id', `${order}`);
 
-    return users;
+    return paginate<UsersEntity>(queryBuilder, options);
   }
 
   async create(data: CreateUserDto): Promise<UsersEntity> {

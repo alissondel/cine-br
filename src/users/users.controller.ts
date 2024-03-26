@@ -20,6 +20,7 @@ import { UserId } from 'src/decorators/user-id-decorator';
 import { Roles } from 'src/decorators/roles.decorator';
 import { UserType } from './enum/user-type.enum';
 import { NotFoundError } from 'src/commom/errors/types/NotFoundError';
+import { Pagination } from 'nestjs-typeorm-paginate';
 
 @Controller('users')
 export class UsersController {
@@ -33,10 +34,13 @@ export class UsersController {
 
   @Roles(UserType.Admin)
   @Get()
-  async users(@Query('order') order: 'ASC' | 'DESC'): Promise<ReturnUserDto[]> {
-    return (await this.usersService.findAll(order)).map(
-      (userEntity) => new ReturnUserDto(userEntity),
-    );
+  async users(
+    @Query('page') page = 1,
+    @Query('limit') limit = 100,
+    @Query('order') order: 'ASC' | 'DESC',
+  ): Promise<Pagination<ReturnUserDto>> {
+    limit = limit > 100 ? 100 : limit;
+    return await this.usersService.findAll({ page, limit }, order);
   }
 
   @Roles(UserType.User, UserType.Root, UserType.Admin)
