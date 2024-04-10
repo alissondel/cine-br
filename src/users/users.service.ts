@@ -63,24 +63,36 @@ export class UsersService {
   async findAll(
     options: IPaginationOptions,
     order: 'ASC' | 'DESC' = 'ASC',
+    id: number,
+    name: string,
+    email: string,
+    typeUser: number,
+    status: boolean,
   ): Promise<Pagination<UsersEntity>> {
     const queryBuilder = this.usersRepository.createQueryBuilder('u');
 
-    queryBuilder.select([
+    const user = await queryBuilder.select([
       'u.id',
       'u.name',
       'u.email',
       'u.phone',
-      'u.type_user',
+      'u.typeUser',
       'u.cpf',
       'u.status',
     ]);
-    queryBuilder.orderBy('u.id', `${order}`);
 
-    return paginate<UsersEntity>(queryBuilder, options);
+    id && user.andWhere('u.id = :id', { id });
+    name && user.andWhere('u.name ILIKE :name', { name: `%${name}%` });
+    email && user.andWhere('u.email ILIKE :email', { email: `%${email}%` });
+    typeUser && user.andWhere('u.typeUser = :typeUser', { typeUser });
+    status !== undefined && user.andWhere('u.status = :status', { status });
+    order && user.orderBy('u.id', `${order}`);
+    user.withDeleted();
+
+    return paginate<UsersEntity>(user, options);
   }
 
-  async create(data: CreateUserDto): Promise<UsersEntity> {
+  async createCommon(data: CreateUserDto): Promise<UsersEntity> {
     const { email, password, ...rest } = data;
 
     const cryptPassword = await encryptPassword(password);
@@ -91,7 +103,7 @@ export class UsersService {
       password: cryptPassword,
       typeUser: 1,
       createdAt: new Date(),
-      createdUser: 1,
+      createdUser: 0,
     };
 
     const user = await this.usersRepository.create(createdUserData);
@@ -101,12 +113,39 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async update(id: number, data: UpdateUserDto): Promise<UsersEntity> {
-    const userOld = await this.findOne(id);
+  async createAdmin(userId: number, data: CreateUserDto): Promise<UsersEntity> {
+    const { email, password, ...rest } = data;
+
+    const cryptPassword = await encryptPassword(password);
+
+    const createdUserData = {
+      ...rest,
+      email: email.trim(),
+      password: cryptPassword,
+      typeUser: 3,
+      createdAt: new Date(),
+      createdUser: userId,
+    };
+
+    const user = await this.usersRepository.create(createdUserData);
+
+    if (!user) throw new Error('Faltando campos preenchidos!');
+
+    return this.usersRepository.save(user);
+  }
+
+  async update(userId: number, data: UpdateUserDto): Promise<UsersEntity> {
+    const userOld = await this.findOne(userId);
+
+    const UpdatedUserData = {
+      ...data,
+      updatedAt: new Date(),
+      updatedUser: userId,
+    };
 
     return await this.usersRepository.save({
       ...userOld,
-      ...data,
+      ...UpdatedUserData,
     });
   }
 
@@ -134,13 +173,12 @@ export class UsersService {
     });
   }
 
-  async delete(id: number): Promise<UsersEntity> {
-    const user = await this.findOne(id);
+  async delete(userId: number): Promise<UsersEntity> {
+    const user = await this.findOne(userId);
 
     const data = {
       deletedAt: new Date(),
-      updatedAt: new Date(),
-      deletedUser: +id,
+      deletedUser: userId,
       status: false,
     };
 

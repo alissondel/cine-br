@@ -4,8 +4,8 @@ import {
   Post,
   Body,
   Put,
-  Param,
   Delete,
+  Param,
   UsePipes,
   ValidationPipe,
   Query,
@@ -14,7 +14,6 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersEntity } from './entities/user.entity';
-import { ReturnUserDto } from './dto/return-user.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UserId } from 'src/decorators/user-id-decorator';
 import { Roles } from 'src/decorators/roles.decorator';
@@ -26,25 +25,46 @@ import { Pagination } from 'nestjs-typeorm-paginate';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Roles(UserType.User, UserType.Root, UserType.Admin)
-  @Get(':id')
-  async user(@Param('id') id: string): Promise<UsersEntity> {
-    return await this.usersService.findOne(+id);
+  @Roles(UserType.Admin)
+  @UsePipes(ValidationPipe)
+  @Get(':userId')
+  async userById(@Param('userId') userId: string): Promise<UsersEntity> {
+    return await this.usersService.findOne(+userId);
+  }
+
+  @Roles(UserType.Common, UserType.Root, UserType.Admin)
+  @UsePipes(ValidationPipe)
+  @Get('/userId')
+  async user(@UserId() userId: number): Promise<UsersEntity> {
+    return await this.usersService.findOne(userId);
   }
 
   @Roles(UserType.Admin)
+  @UsePipes(ValidationPipe)
   @Get()
   async users(
     @Query('page') page = 1,
     @Query('limit') limit = 100,
     @Query('order') order: 'ASC' | 'DESC',
-  ): Promise<Pagination<ReturnUserDto>> {
+    @Query('id') id: number,
+    @Query('name') name: string,
+    @Query('email') email: string,
+    @Query('typeUser') typeUser: number,
+    @Query('status') status: boolean,
+  ): Promise<Pagination<UsersEntity>> {
     limit = limit > 100 ? 100 : limit;
-    return await this.usersService.findAll({ page, limit }, order);
+    return await this.usersService.findAll(
+      { page, limit },
+      order,
+      id,
+      name,
+      email,
+      typeUser,
+      status,
+    );
   }
 
-  @Roles(UserType.User, UserType.Root, UserType.Admin)
-  @Post()
+  @Post('/create-user-common')
   async createUser(@Body() data: CreateUserDto): Promise<UsersEntity> {
     const { email, cpf } = data;
 
@@ -53,31 +73,50 @@ export class UsersController {
 
     if (!isEmailUnique) throw new NotFoundError('Este e-mail já está em uso.');
     else if (!isCpfUnique) throw new NotFoundError('Este CPF já está em uso.');
-    else return await this.usersService.create(data);
+    else return await this.usersService.createCommon(data);
   }
 
-  @Roles(UserType.User, UserType.Root, UserType.Admin)
-  @Put(':id')
+  @Roles(UserType.Admin)
+  @UsePipes(ValidationPipe)
+  @Post('/create-user-admin')
+  async createAdmin(
+    @UserId() userId: number,
+    @Body() data: CreateUserDto,
+  ): Promise<UsersEntity> {
+    const { email, cpf } = data;
+
+    const isEmailUnique = await this.usersService.isEmailUnique(email);
+    const isCpfUnique = await this.usersService.isCpfUnique(cpf);
+
+    if (!isEmailUnique) throw new NotFoundError('Este e-mail já está em uso.');
+    else if (!isCpfUnique) throw new NotFoundError('Este CPF já está em uso.');
+    else return await this.usersService.createAdmin(userId, data);
+  }
+
+  @Roles(UserType.Common, UserType.Root, UserType.Admin)
+  @UsePipes(ValidationPipe)
+  @Put('/update-user')
   async update(
-    @Param('id') id: string,
+    @UserId() userId: number,
     @Body() data: UpdateUserDto,
   ): Promise<UsersEntity> {
-    return this.usersService.update(+id, data);
+    return await this.usersService.update(userId, data);
   }
 
-  @Roles(UserType.User, UserType.Root, UserType.Admin)
+  @Roles(UserType.Common, UserType.Root, UserType.Admin)
   @UsePipes(ValidationPipe)
   @Put('/update-password')
   async updatePasswordUser(
     @UserId() userId: number,
     @Body() data: UpdatePasswordDto,
   ): Promise<UsersEntity> {
-    return this.usersService.updatePassword(userId, data);
+    return await this.usersService.updatePassword(userId, data);
   }
 
-  @Roles(UserType.User, UserType.Root, UserType.Admin)
-  @Delete(':id')
-  async delete(@Param('id') id: string): Promise<UsersEntity> {
-    return this.usersService.delete(+id);
+  @Roles(UserType.Common, UserType.Root, UserType.Admin)
+  @UsePipes(ValidationPipe)
+  @Delete('/inactivate-user')
+  async delete(@UserId() userId: number): Promise<UsersEntity> {
+    return await this.usersService.delete(userId);
   }
 }
