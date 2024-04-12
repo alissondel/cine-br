@@ -77,7 +77,7 @@ export class StatesService {
 
       const state = await this.statesRepository.create(createdStateData);
 
-      if (!state) throw new Error('Faltando campos preenchidos!');
+      if (!state) throw new NotFoundError('Faltando campos preenchidos!');
 
       return this.statesRepository.save(state);
     }

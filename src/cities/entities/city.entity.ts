@@ -1,24 +1,23 @@
-import { CitiesEntity } from 'src/cities/entities/city.entity';
 import {
   Entity,
   Column,
-  OneToMany,
+  ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-@Entity({ name: 'state' })
-export class StatesEntity {
+import { StatesEntity } from 'src/states/entities/state.entity';
+
+@Entity('city')
+export class CitiesEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
   @Column({ nullable: false })
   name: string;
-
-  @Column({ name: 'abbreviation', nullable: false })
-  abbreviation: string;
 
   @Column({ default: true })
   status: boolean;
@@ -41,6 +40,13 @@ export class StatesEntity {
   @Column({ name: 'deleted_user', type: 'integer', nullable: true })
   deletedUser!: number;
 
-  @OneToMany(() => CitiesEntity, (city) => city.state)
-  cities?: CitiesEntity[];
+  @Column({ name: 'state_id', nullable: false })
+  stateId: number;
+
+  @ManyToOne(() => StatesEntity, (state) => state.cities)
+  @JoinColumn({
+    name: 'state_id',
+    referencedColumnName: 'id',
+  })
+  state: StatesEntity;
 }

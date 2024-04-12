@@ -10,6 +10,7 @@ import { JwtModule } from '@nestjs/jwt';
 // IMPORT TYPEORM MODULE
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { StatesModule } from './states/states.module';
+import { CitiesModule } from './cities/cities.module';
 
 // IMPORT DOTENV
 import * as dotenv from 'dotenv';
@@ -33,6 +34,7 @@ dotenv.config();
     AuthModule,
     JwtModule,
     StatesModule,
+    CitiesModule,
   ],
   controllers: [],
   providers: [

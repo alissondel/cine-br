@@ -72,7 +72,7 @@ export class StatesController {
   @Roles(UserType.Admin)
   @UsePipes(ValidationPipe)
   @Delete(':id')
-  async remove(@UserId() userId: number, @Param('id') id: string) {
+  async delete(@UserId() userId: number, @Param('id') id: string) {
     return await this.statesService.delete(userId, +id);
   }
 }
